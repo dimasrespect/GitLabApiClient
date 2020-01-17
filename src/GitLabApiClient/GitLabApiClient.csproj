@@ -3,19 +3,21 @@
   <PropertyGroup>
     <TargetFrameworks Condition="'$(OS)' != 'Unix'">netstandard2.0;net48;netcoreapp3.1</TargetFrameworks>
     <TargetFrameworks Condition="'$(OS)' == 'Unix'">netstandard2.0;netcoreapp3.1</TargetFrameworks>
-    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Copyright />
-    <Description>GitLabApiClient is a .NET rest client for GitLab API v4.</Description>
+    <Description>GitLabApiClient is a .NET rest client for GitLab API v4 (Signed version).</Description>
     <Authors>nmklotas</Authors>
-    <PackageProjectUrl>https://github.com/nmklotas/GitLabApiClient</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/nmklotas/GitLabApiClient</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/dimasrespect/GitLabApiClient</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/dimasrespect/GitLabApiClient.git</RepositoryUrl>
     <PackageTags>GitLab REST API CI Client</PackageTags>
-    <PackageId>GitLabApiClient</PackageId>
+    <PackageId>GitLabApiClient.Signed</PackageId>
     <Company>nmklotas</Company>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <IncludeSymbols>true</IncludeSymbols>
     <UseFullSemVerForNuGet>true</UseFullSemVerForNuGet>
     <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>StrongKey.snk</AssemblyOriginatorKeyFile>
   </PropertyGroup>
 
   <ItemGroup>
