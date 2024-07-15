@@ -10,7 +10,7 @@
     <PackageProjectUrl>https://github.com/dimasrespect/GitLabApiClient</PackageProjectUrl>
     <RepositoryUrl>https://github.com/dimasrespect/GitLabApiClient.git</RepositoryUrl>
     <PackageTags>GitLab REST API CI Client</PackageTags>
-    <PackageId>GitLabApiClient</PackageId>
+    <PackageId>GitLabApiClient.Signed</PackageId>
     <Company>nmklotas</Company>
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <IncludeSymbols>true</IncludeSymbols>
