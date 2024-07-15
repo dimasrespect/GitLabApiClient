@@ -16,29 +16,30 @@ namespace GitLabApiClient.Internal.Http
     {
         private const string PrivateToken = "PRIVATE-TOKEN";
 
-        private readonly object _locker = new object();
         private readonly HttpClient _httpClient;
         private GitLabApiRequestor _requestor;
         private GitLabApiPagedRequestor _pagedRequestor;
 
-        private GitLabHttpFacade(string hostUrl, RequestsJsonSerializer jsonSerializer)
+        private GitLabHttpFacade(string hostUrl, RequestsJsonSerializer jsonSerializer, HttpMessageHandler httpMessageHandler, TimeSpan? clientTimeout = null)
         {
-            _httpClient = new HttpClient { BaseAddress = new Uri(hostUrl) };
+            _httpClient = new HttpClient(httpMessageHandler ?? new HttpClientHandler()) { BaseAddress = new Uri(hostUrl) };
+            if (clientTimeout.HasValue)
+                _httpClient.Timeout = clientTimeout.Value;
 
             Setup(jsonSerializer);
         }
 
-        public GitLabHttpFacade(string hostUrl, RequestsJsonSerializer jsonSerializer, string authenticationToken = "") :
-            this(hostUrl, jsonSerializer)
+        public GitLabHttpFacade(string hostUrl, RequestsJsonSerializer jsonSerializer, string authenticationToken = "", HttpMessageHandler httpMessageHandler = null, TimeSpan? clientTimeout = null) :
+            this(hostUrl, jsonSerializer, httpMessageHandler, clientTimeout)
         {
             switch (authenticationToken.Length)
             {
-                case 0:
+                case int i when i == 0:
                     break;
-                case 20:
+                case int i when i >= 20 && i < 64:
                     _httpClient.DefaultRequestHeaders.Add(PrivateToken, authenticationToken);
                     break;
-                case 64:
+                case int i when i == 64:
                     _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", authenticationToken);
                     break;
                 default:
@@ -67,6 +68,9 @@ namespace GitLabApiClient.Internal.Http
         public Task<T> Get<T>(string uri) =>
             _requestor.Get<T>(uri);
 
+        public Task GetFile(string uri, string outputPath) =>
+            _requestor.GetFile(uri, outputPath);
+
         public Task<T> Post<T>(string uri, object data = null) where T : class =>
             _requestor.Post<T>(uri, data);
 
@@ -76,6 +80,9 @@ namespace GitLabApiClient.Internal.Http
         public Task<Upload> PostFile(string uri, CreateUploadRequest uploadRequest) =>
             _requestor.PostFile(uri, uploadRequest);
 
+        public Task<T> PostFile<T>(string uri, Dictionary<string, string> keyValues, CreateUploadRequest uploadRequest) =>
+            _requestor.PostFile<T>(uri, keyValues, uploadRequest);
+
         public Task<T> Put<T>(string uri, object data) =>
             _requestor.Put<T>(uri, data);
 
@@ -84,6 +91,8 @@ namespace GitLabApiClient.Internal.Http
 
         public Task Delete(string uri) =>
             _requestor.Delete(uri);
+        public Task Delete(string uri, object data) =>
+            _requestor.Delete(uri, data);
 
         public async Task<AccessTokenResponse> LoginAsync(AccessTokenRequest accessTokenRequest)
         {
@@ -91,13 +100,10 @@ namespace GitLabApiClient.Internal.Http
             string url = $"{_httpClient.BaseAddress.GetLeftPart(UriPartial.Authority)}/oauth/token";
             var accessTokenResponse = await _requestor.Post<AccessTokenResponse>(url, accessTokenRequest);
 
-            lock (_locker)
-            {
-                if (_httpClient.DefaultRequestHeaders.Contains(PrivateToken))
-                    _httpClient.DefaultRequestHeaders.Remove(PrivateToken);
+            if (_httpClient.DefaultRequestHeaders.Contains(PrivateToken))
+                _httpClient.DefaultRequestHeaders.Remove(PrivateToken);
 
-                _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessTokenResponse.AccessToken);
-            }
+            _httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessTokenResponse.AccessToken);
 
             return accessTokenResponse;
         }

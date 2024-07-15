@@ -1,13 +1,11 @@
-using FluentAssertions;
+using System;
 using System.Threading.Tasks;
+using FluentAssertions;
 using GitLabApiClient.Internal.Queries;
 using GitLabApiClient.Models.Releases.Requests;
+using GitLabApiClient.Models.Releases.Responses;
 using Xunit;
 using static GitLabApiClient.Test.Utilities.GitLabApiHelper;
-using GitLabApiClient.Models.Releases.Responses;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace GitLabApiClient.Test
 {

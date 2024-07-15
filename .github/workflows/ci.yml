@@ -1,44 +1,60 @@
-name: DotNet CI
+name: DotNet
 
-on: [push, pull_request]
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+  release:
+    types: [published]
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
-    name: DotNet Test
+    name: Test
     steps:
-      - uses: actions/checkout@master
+      - name: Checkout
+        uses: actions/checkout@v2
         with:
           fetch-depth: 0
-      - name: Fetch tags and master for GitVersion
-        run: |
-          git fetch --tags
-          git branch --create-reflog master origin/master || true
 
-      - name: Setup dotnet
+      - uses: actions/cache@v2
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+      - name: Setup dotnet 3.1
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: '2.1.607'
-      - name: Setup dotnet
-        uses: casz/setup-dotnet@fix/dotnet-global-tool
+          dotnet-version: '3.1'
+      - name: Setup dotnet 5
+        uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: '3.1.100'
-
-      # workaround for using multiple dotnet core installs
-      - name: .net SxS
-        run: rsync -a ${DOTNET_ROOT/3.1.100/2.1.607}/* $DOTNET_ROOT/
+          dotnet-version: '5.0'
 
       - run: dotnet tool install -g Codecov.Tool
-        shell: pwsh
 
       - run: dotnet tool install -g GitVersion.Tool
-        shell: pwsh
 
-      - run: dotnet gitversion /l console /output buildserver
-        shell: pwsh
+      - name: GitVersion
+        run: dotnet gitversion /l console /output buildserver
 
       - run: ./build.ps1
         shell: pwsh
 
       - run: ./test.ps1
         shell: pwsh
+
+      - name: Push NuGet
+        if: |
+          startsWith(github.event.ref, 'refs/tags/')
+          || endsWith(github.event.ref, '/master')
+          || github.event.action == 'published'
+        shell: pwsh
+        run: dotnet nuget push **/*.nupkg --source $Env:SOURCE --api-key $Env:TOKEN --skip-duplicate
+        env:
+          SOURCE: 'https://api.nuget.org/v3/index.json'
+          TOKEN: ${{ secrets.NUGET_API_KEY }}

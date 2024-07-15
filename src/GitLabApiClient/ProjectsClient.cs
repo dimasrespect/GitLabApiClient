@@ -6,10 +6,14 @@ using GitLabApiClient.Internal.Http;
 using GitLabApiClient.Internal.Paths;
 using GitLabApiClient.Internal.Queries;
 using GitLabApiClient.Internal.Utilities;
+using GitLabApiClient.Models.Job.Requests;
+using GitLabApiClient.Models.Job.Responses;
 using GitLabApiClient.Models.Milestones.Requests;
 using GitLabApiClient.Models.Milestones.Responses;
 using GitLabApiClient.Models.Projects.Requests;
 using GitLabApiClient.Models.Projects.Responses;
+using GitLabApiClient.Models.Runners.Responses;
+using GitLabApiClient.Models.Uploads.Requests;
 using GitLabApiClient.Models.Users.Responses;
 using GitLabApiClient.Models.Variables.Request;
 using GitLabApiClient.Models.Variables.Response;
@@ -21,17 +25,19 @@ namespace GitLabApiClient
     /// <exception cref="GitLabException">Thrown if request to GitLab API fails</exception>
     /// <exception cref="HttpRequestException">Thrown if request to GitLab API fails</exception>
     /// </summary>
-    public sealed class ProjectsClient
+    public sealed class ProjectsClient : IProjectsClient
     {
         private readonly GitLabHttpFacade _httpFacade;
         private readonly ProjectsQueryBuilder _queryBuilder;
         private readonly MilestonesQueryBuilder _queryMilestonesBuilder;
+        private readonly JobQueryBuilder _jobQueryBuilder;
 
-        internal ProjectsClient(GitLabHttpFacade httpFacade, ProjectsQueryBuilder queryBuilder, MilestonesQueryBuilder queryMilestonesBuilder)
+        internal ProjectsClient(GitLabHttpFacade httpFacade, ProjectsQueryBuilder queryBuilder, MilestonesQueryBuilder queryMilestonesBuilder, JobQueryBuilder jobQueryBuilder)
         {
             _httpFacade = httpFacade;
             _queryBuilder = queryBuilder;
             _queryMilestonesBuilder = queryMilestonesBuilder;
+            _jobQueryBuilder = jobQueryBuilder;
         }
 
         /// <summary>
@@ -66,7 +72,7 @@ namespace GitLabApiClient
         /// Retrieves project variables by its id.
         /// </summary>
         /// <param name="projectId">Id of the project.</param>
-        public async Task<IList<Variable>> GetVariablesAsync(int projectId) =>
+        public async Task<IList<Variable>> GetVariablesAsync(ProjectId projectId) =>
             await _httpFacade.GetPagedList<Variable>($"projects/{projectId}/variables");
 
         /// <summary>
@@ -91,12 +97,33 @@ namespace GitLabApiClient
         }
 
         /// <summary>
+        /// Get the jobs list of a project
+        /// </summary>
+        /// <param name="projectId">The ID, path or <see cref="Project"/> of the project.</param>
+        /// <param name="options">Query options.</param>
+        public async Task<IList<Job>> GetJobsAsync(ProjectId projectId, Action<JobQueryOptions> options = null)
+        {
+            var queryOptions = new JobQueryOptions();
+            options?.Invoke(queryOptions);
+
+            var url = _jobQueryBuilder.Build($"projects/{projectId}/jobs", queryOptions);
+            return await _httpFacade.GetPagedList<Job>(url);
+        }
+
+        /// <summary>
         /// Retrieves project milestone by its id
         /// </summary>
         /// <param name="projectId">The ID, path or <see cref="Project"/> of the project.</param>
         /// <param name="milestoneId">Id of the milestone.</param>
         public async Task<Milestone> GetMilestoneAsync(ProjectId projectId, int milestoneId) =>
             await _httpFacade.Get<Milestone>($"projects/{projectId}/milestones/{milestoneId}");
+
+        /// <summary>
+        /// Get the runners list of a project.
+        /// </summary>
+        /// <param name="projectId">The ID, path or <see cref="Project"/> of the project.</param>
+        public async Task<IList<Runner>> GetRunnersAsync(ProjectId projectId) =>
+            await _httpFacade.GetPagedList<Runner>($"projects/{projectId}/runners");
 
         /// <summary>
         /// Creates new project.
@@ -243,6 +270,70 @@ namespace GitLabApiClient
         {
             Guard.NotNull(request, nameof(request));
             return await _httpFacade.Put<Project>($"projects/{projectId}/transfer", request);
+        }
+
+        /// <summary>
+        /// Request the export of a project.
+        /// </summary>
+        /// <param name="projectId">The ID, path or <see cref="Project"/> of the project.</param>
+        public async Task ExportAsync(ProjectId projectId)
+        {
+            await _httpFacade.Post($"projects/{projectId}/export");
+        }
+
+        /// <summary>
+        /// Get status of the export.
+        /// </summary>
+        /// <param name="projectId">The ID, path or <see cref="Project"/> of the project.</param>
+        /// <returns>Status of the export</returns>
+        public async Task<ExportStatus> GetExportStatusAsync(ProjectId projectId)
+        {
+            return await _httpFacade.Get<ExportStatus>($"projects/{projectId}/export");
+        }
+
+        /// <summary>
+        /// Download an exported project if it exists
+        /// </summary>
+        /// <param name="projectId">The ID, path or <see cref="Project"/> of the project.</param>
+        /// <param name="outputPath">The filename that should contain the contents of the download after the download completes</param>
+        /// <returns>Status of the export</returns>
+        public async Task ExportDownloadAsync(ProjectId projectId, string outputPath)
+        {
+            await _httpFacade.GetFile($"projects/{projectId}/export/download", outputPath);
+        }
+
+        /// <summary>
+        /// Request the import of a project.
+        /// </summary>
+        /// <param name="projectId">The ID, path or <see cref="Project"/> of the project.</param>
+        /// <returns>Status of the import (including the id of the new project)</returns>
+        public async Task<ImportStatus> ImportAsync(ImportProjectRequest request)
+        {
+            Guard.NotNull(request, nameof(request));
+
+            var parameters = new Dictionary<string, string>();
+            foreach (var prop in request.GetType().GetProperties())
+            {
+                if (prop.GetValue(request) != null && prop.Name != nameof(ImportProjectRequest.File))
+                {
+                    parameters.Add((prop.GetCustomAttributes(typeof(Newtonsoft.Json.JsonPropertyAttribute), false)[0] as Newtonsoft.Json.JsonPropertyAttribute).PropertyName, prop.GetValue(request).ToString());
+                }
+            }
+
+            using (var stream = System.IO.File.OpenRead(request.File))
+            {
+                return await _httpFacade.PostFile<ImportStatus>($"projects/import", parameters, new CreateUploadRequest(stream, request.Path + ".tar.gz"));
+            }
+        }
+
+        /// <summary>
+        /// Get status of the import.
+        /// </summary>
+        /// <param name="projectId">The ID, path or <see cref="Project"/> of the project.</param>
+        /// <returns>Status of the import</returns>
+        public async Task<ImportStatus> GetImportStatusAsync(ProjectId projectId)
+        {
+            return await _httpFacade.Get<ImportStatus>($"projects/{projectId}/import");
         }
     }
 }

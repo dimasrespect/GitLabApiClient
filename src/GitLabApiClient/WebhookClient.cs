@@ -1,4 +1,3 @@
-﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using GitLabApiClient.Internal.Http;
@@ -9,12 +8,11 @@ using GitLabApiClient.Models.Webhooks.Responses;
 
 namespace GitLabApiClient
 {
-    public sealed class WebhookClient
+    public sealed class WebhookClient : IWebhookClient
     {
         private readonly GitLabHttpFacade _httpFacade;
 
-        internal WebhookClient(
-            GitLabHttpFacade httpFacade)
+        internal WebhookClient(GitLabHttpFacade httpFacade)
         {
             _httpFacade = httpFacade;
         }
@@ -25,7 +23,7 @@ namespace GitLabApiClient
         /// <param name="projectId">The ID, path or <see cref="Project"/> of the project.</param>
         /// <param name="hookId">The hook ID, you want to retrieve.</param>
         /// <returns></returns>
-        public async Task<Webhook> GetAsync(ProjectId projectId, int hookId) =>
+        public async Task<Webhook> GetAsync(ProjectId projectId, long hookId) =>
             await _httpFacade.Get<Webhook>($"projects/{projectId}/hooks/{hookId}");
 
         /// <summary>
@@ -52,8 +50,18 @@ namespace GitLabApiClient
         /// </summary>
         /// <param name="projectId">The ID, path or <see cref="Project"/> of the project.</param>
         /// <param name="hookId">The hook ID, you want to delete.</param>
-        public async Task DeleteAsync(ProjectId projectId, int hookId) =>
+        public async Task DeleteAsync(ProjectId projectId, long hookId) =>
             await _httpFacade.Delete($"projects/{projectId}/hooks/{hookId}");
+
+        /// <summary>
+        /// Update new webhook
+        /// </summary>
+        /// <param name="projectId">The ID, path or <see cref="Project"/> of the project.</param>
+        /// <param name="hookId">The hook ID, you want to update.</param>
+        /// <param name="request">Create hook request.</param>
+        /// <returns>newly created hook</returns>
+        public async Task<Webhook> UpdateAsync(ProjectId projectId, long hookId, CreateWebhookRequest request) =>
+            await _httpFacade.Put<Webhook>($"projects/{projectId}/hooks/{hookId}", request);
     }
 
 
