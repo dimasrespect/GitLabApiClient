@@ -1,4 +1,4 @@
 using System.Runtime.CompilerServices;
 
-[assembly: InternalsVisibleTo("GitLabApiClient.Test")]
-[assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]
+[assembly: InternalsVisibleTo("GitLabApiClient.Test, PublicKey=00240000048000009400000006020000002400005253413100040000010001006dd4ac877b57cb483af1fa9a69bcfefba92fc67c09198475a48eb80e2cf6f559f3fd3a75c1bbffacf2bce1469aaf0eb00de1bc3d6b2467d86e9bcdc15dbd894c5e9c1ab0b4695bc161451402fb802b725c9b819651c2b78ec91d8da228b36e5d1436d5ac101be91142634706d319adb7eb20959b1351e7d2d0351f9f142866c5")]
+//[assembly: InternalsVisibleTo("DynamicProxyGenAssembly2")]
